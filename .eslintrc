@@ -1,0 +1,20 @@
+{
+  "extends": ['plugin:jasmine/recommended', "airbnb/base"],
+  // I want to use babel-eslint for parsing!
+  "parser": "babel-eslint",
+  "env": {
+    // I write for browser
+    "browser": true,
+    // in CommonJS
+    "node": true,
+    "jasmine": true
+  },
+  "plugins": ["jasmine"],
+  // To give you an idea how to override rule options:
+  "rules": {
+    "semi": [2, "never"],
+    "eol-last": 0,
+    "quotes": [2, "single"],
+    "no-underscore-dangle": [0]
+  }
+}
