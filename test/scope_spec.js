@@ -1,3 +1,5 @@
+import _ from 'lodash'
+
 const Scope = require('../src/scope.js')
 
 describe('Scope', () => {
@@ -84,6 +86,76 @@ describe('Scope', () => {
 
       $scope.$digest()
       expect(watchFn).toHaveBeenCalled()
+    })
+
+    it('triggers chained watchers in the same digest', () => {
+      $scope.name = 'Jane'
+
+      $scope.$watch(scope => scope.nameUpper, (newValue, oldValue, scope) => {
+        if (newValue) {
+          scope.initial = `${newValue.substring(0, 1)}.`
+        }
+      })
+
+      $scope.$watch(scope => scope.name, (newValue, oldValue, scope) => {
+        if (newValue) {
+          scope.nameUpper = newValue.toUpperCase()
+        }
+      })
+
+      $scope.$digest()
+      expect($scope.initial).toBe('J.')
+
+      $scope.name = 'Bob'
+      $scope.$digest()
+      expect($scope.initial).toBe('B.')
+    })
+
+    it('gives up on the watches after 10 iterations', () => {
+      $scope.counterA = 0
+      $scope.counterB = 0
+
+      $scope.$watch(scope => scope.counterA, (newValue, oldValue, scope) => {
+        scope.counterB++
+      })
+
+      $scope.$watch(scope => scope.counterB, (newValue, oldValue, scope) => {
+        scope.counterA++
+      })
+
+      expect((() => { $scope.$digest() })).toThrow()
+    })
+
+    it('ends the digest when the last watch is clean', () => {
+      $scope.array = _.range(100)
+      let watchExecutions = 0
+
+      _.times(100, i => {
+        $scope.$watch(scope => {
+          watchExecutions++
+          return scope.array[i]
+        })
+      })
+
+      $scope.$digest()
+      expect(watchExecutions).toBe(200)
+
+      $scope.array[0] = 420
+      $scope.$digest()
+      expect(watchExecutions).toBe(301)
+    })
+
+    it('does not end digest so that new watches are not run', () => {
+      $scope.aValue = 'abc'
+      $scope.counter = 0
+
+      $scope.$watch(scope => scope.aValue, (newValue, oldValue, scope) => {
+        scope.$watch(scope => scope.aValue, (newValue, oldValue, scope) => {
+          scope.counter++
+        })
+      })
+      $scope.$digest()
+      expect($scope.counter).toBe(1)
     })
   })
 })

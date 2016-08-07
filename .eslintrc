@@ -16,6 +16,7 @@
     "eol-last": 0,
     "quotes": [2, "single"],
     "no-underscore-dangle": [0],
-    "no-param-reassign": 1
+    "no-param-reassign": 1,
+    "no-shadow": 1,
   }
 }
