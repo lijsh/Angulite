@@ -2,7 +2,7 @@ import _ from 'lodash'
 
 function initWatchVal() {}
 
-module.exports = class Scope {
+export default class Scope {
     constructor() {
         this.$$watchers = []
         this.$$lastDirtyWatch = null

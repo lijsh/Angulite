@@ -1,6 +1,5 @@
 import _ from 'lodash'
-
-const Scope = require('../src/scope.js')
+import Scope from '../src/scope.js'
 
 describe('Scope', () => {
     it('can be constructed and used as an object', () => {
