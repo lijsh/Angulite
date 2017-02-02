@@ -1,22 +1,24 @@
+const webpackEnv = { test: true }
+const webpackConfig = require('./webpack.config')(webpackEnv)
+
 module.exports = function karmaConf(config) {
     config.set({
-        frameworks: ['browserify', 'jasmine'],
+        frameworks: ['jasmine'],
         files: [
             'src/**/*.js',
             'test/**/*_spec.js',
         ],
         preprocessors: {
-            'src/**/*.js': ['browserify'],
-            'test/**/*_spec.js': ['browserify'],
+            'src/**/*.js': ['webpack'],
+            'test/**/*_spec.js': ['webpack'],
         },
-        browsers: ['PhantomJS'],
-        browserify: {
-            debug: true,
-            configure(bundle) {
-                bundle.once('prebundle', () => {
-                    bundle.transform('babelify', { presets: ['es2015'] })
-                })
-            },
-        },
+        browsers: ['PhantomJS', 'Chrome', 'Firefox'],
+        webpack: webpackConfig,
+        webpackMiddleware: { noInfo: true },
+        logLevel: config.LOG_INFO,
+        autoWatch: false,
+        colors: true,
+        singleRun: true,
+        concurrency: Infinity,
     })
 }
