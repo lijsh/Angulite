@@ -1,1 +1,1 @@
-A lite Angular implementation, inspired by [build your own AngularJS](http://teropa.info/build-your-own-angular/)
+A lite Angular.js implementation, inspired by [build your own AngularJS](http://teropa.info/build-your-own-angular/)

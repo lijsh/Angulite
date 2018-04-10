@@ -12,7 +12,7 @@ module.exports = function karmaConf(config) {
       'src/**/*.js': ['webpack'],
       'test/**/*_spec.js': ['webpack'],
     },
-    browsers: ['PhantomJS', 'Chrome'],
+    browsers: ['PhantomJS'],
     webpack: webpackConfig,
     webpackMiddleware: { noInfo: true },
     logLevel: config.LOG_INFO,
