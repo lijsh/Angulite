@@ -22,6 +22,15 @@ class Lexer {
     return ch === 'e' || ch === 'E'
   }
 
+  static isIdent(ch) {
+    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || ch === '$'
+  }
+
+  static isWhiteSpace(ch) {
+    return ch === ' ' || ch === '\r' || ch === '\t' ||
+      ch === '\n' || ch === '\v' || ch === '\u00A0'
+  }
+
   lex(text) {
     this.text = text
     this.index = 0
@@ -33,6 +42,10 @@ class Lexer {
         this.readNumber()
       } else if (this.ch === '\'' || this.ch === '"') {
         this.readString(this.ch)
+      } else if (Lexer.isIdent(this.ch)) {
+        this.readIdent()
+      } else if (Lexer.isWhiteSpace(this.ch)) {
+        this.index++
       } else {
         throw `Unexpected next character: ${this.ch}` // eslint-disable-line
       }
@@ -112,11 +125,30 @@ class Lexer {
     }
     throw 'Unmatched quote' // eslint-disable-line
   }
+
+  readIdent() {
+    let text = ''
+    while (this.index < this.text.length) {
+      const ch = this.text.charAt(this.index)
+      if (Lexer.isIdent(ch) || Lexer.isNumber(ch)) {
+        text += ch
+      } else {
+        break
+      }
+      this.index++
+    }
+    this.tokens.push({ text })
+  }
 }
 
 class AST {
   static Program = 'Program'
   static Literal = 'Literal'
+  static constants = {
+    null: { type: AST.Literal, value: null },
+    false: { type: AST.Literal, value: false },
+    true: { type: AST.Literal, value: true },
+  }
   constructor(lexer) {
     this.lexer = lexer
   }
@@ -127,7 +159,15 @@ class AST {
   }
 
   program() {
-    return { type: AST.Program, body: this.constant() }
+    return { type: AST.Program, body: this.primary() }
+  }
+
+  primary() {
+    const { hasOwnProperty } = Object.prototype
+    if (hasOwnProperty.call(AST.constants, this.tokens[0].text)) {
+      return AST.constants[this.tokens[0].text]
+    }
+    return this.constant()
   }
 
   constant() {
@@ -145,6 +185,8 @@ class AstCompiler {
   static escape(value) {
     if (_.isString(value)) {
       return `'${value.replace(/[^ a-zA-Z0-9]/g, AstCompiler.StringEscapeFn)}'`
+    } else if (_.isNull(value)) {
+      return 'null'
     }
     return value
   }

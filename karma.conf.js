@@ -16,9 +16,9 @@ module.exports = function karmaConf(config) {
     webpack: webpackConfig,
     webpackMiddleware: { noInfo: true },
     logLevel: config.LOG_INFO,
-    autoWatch: false,
+    autoWatch: true,
     colors: true,
-    singleRun: true,
+    singleRun: false,
     concurrency: Infinity,
   })
 }
