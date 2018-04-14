@@ -46,6 +46,9 @@ class Lexer {
         this.readIdent()
       } else if (Lexer.isWhiteSpace(this.ch)) {
         this.index++
+      } else if (this.ch === '[' || this.ch === ']' || this.ch === ',') {
+        this.tokens.push({ text: this.ch })
+        this.index++
       } else {
         throw `Unexpected next character: ${this.ch}` // eslint-disable-line
       }
@@ -144,6 +147,7 @@ class Lexer {
 class AST {
   static Program = 'Program'
   static Literal = 'Literal'
+  static ArrayExpression = 'ArrayExpression'
   static constants = {
     null: { type: AST.Literal, value: null },
     false: { type: AST.Literal, value: false },
@@ -163,9 +167,10 @@ class AST {
   }
 
   primary() {
-    const { hasOwnProperty } = Object.prototype
-    if (hasOwnProperty.call(AST.constants, this.tokens[0].text)) {
-      return AST.constants[this.tokens[0].text]
+    if (this.expect('[')) {
+      return this.arrayDeclaration()
+    } else if (Object.prototype.hasOwnProperty.call(AST.constants, this.tokens[0].text)) {
+      return AST.constants[this.consume().text]
     }
     return this.constant()
   }
@@ -173,8 +178,45 @@ class AST {
   constant() {
     return {
       type: AST.Literal,
-      value: this.tokens[0].value,
+      value: this.consume().value,
     }
+  }
+
+  peek(ch) {
+    if (this.tokens.length > 0) {
+      if (this.tokens[0].text === ch || !ch) {
+        return this.tokens[0]
+      }
+    }
+    return null
+  }
+
+  expect(ch) {
+    const token = this.peek(ch)
+    if (token) {
+      return this.tokens.shift()
+    }
+    return null
+  }
+
+  consume(ch) {
+    const token = this.expect(ch)
+    if (!token) {
+      throw `Unexpected. Expecting: ${ch}` // eslint-disable-line
+    }
+    return token
+  }
+
+  arrayDeclaration() {
+    const elements = []
+    if (!this.peek(']')) {
+      do {
+        if (this.peek(']')) break
+        elements.push(this.primary())
+      } while (this.expect(','))
+    }
+    this.consume(']')
+    return { type: AST.ArrayExpression, elements }
   }
 }
 
@@ -202,13 +244,18 @@ class AstCompiler {
   }
 
   recurse(ast) {
+    let elements
     switch (ast.type) {
       case AST.Program:
         this.state.body.push('return ', this.recurse(ast.body), ';')
-        break
+        return null
       case AST.Literal:
         return AstCompiler.escape(ast.value)
+      case AST.ArrayExpression:
+        elements = ast.elements.map((element) => this.recurse(element))
+        return `[${elements.join(',')}]`
       default:
+        return null
     }
   }
 }

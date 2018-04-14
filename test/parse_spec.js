@@ -100,4 +100,19 @@ describe('parse', () => {
     const fn = parse(' \n42  ')
     expect(fn()).toBe(42)
   })
+
+  it('will parse an empty array', () => {
+    const fn = parse('[]')
+    expect(fn()).toEqual([])
+  })
+
+  it('will parse a non-empty array', () => {
+    const fn = parse('[1, "two", [3], true]')
+    expect(fn()).toEqual([1, 'two', [3], true])
+  })
+
+  it('will parse array with trailing comma', () => {
+    const fn = parse('[1, 2, 3,]')
+    expect(fn()).toEqual([1, 2, 3])
+  })
 })
