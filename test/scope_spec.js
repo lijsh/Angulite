@@ -1,3 +1,4 @@
+/* eslint-disable */
 import _ from 'lodash'
 import Scope from '../src/scope.js'
 

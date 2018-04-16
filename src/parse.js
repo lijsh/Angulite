@@ -46,7 +46,7 @@ class Lexer {
         this.readIdent()
       } else if (Lexer.isWhiteSpace(this.ch)) {
         this.index++
-      } else if (this.is('{}:[],')) {
+      } else if (this.is('{}:[],.')) {
         this.tokens.push({ text: this.ch })
         this.index++
       } else {
@@ -155,10 +155,13 @@ class AST {
   static ObjectExpression = 'ObjectExpression'
   static Property = 'Property'
   static Identifier = 'Identifier'
+  static ThisExpression = 'ThisExpression'
+  static MemberExpression = 'MemberExpression'
   static constants = {
     null: { type: AST.Literal, value: null },
     false: { type: AST.Literal, value: false },
     true: { type: AST.Literal, value: true },
+    this: { type: AST.ThisExpression },
   }
   constructor(lexer) {
     this.lexer = lexer
@@ -174,14 +177,26 @@ class AST {
   }
 
   primary() {
+    let primary
     if (this.expect('[')) {
-      return this.arrayDeclaration()
+      primary = this.arrayDeclaration()
     } else if (this.expect('{')) {
-      return this.object()
+      primary = this.object()
     } else if (Object.prototype.hasOwnProperty.call(AST.constants, this.tokens[0].text)) {
-      return AST.constants[this.consume().text]
+      primary = AST.constants[this.consume().text]
+    } else if (this.peek().identifier) {
+      primary = this.identifier()
+    } else {
+      primary = this.constant()
     }
-    return this.constant()
+    while (this.expect('.')) {
+      primary = {
+        type: AST.MemberExpression,
+        object: primary,
+        property: this.identifier(),
+      }
+    }
+    return primary
   }
 
   constant() {
@@ -274,20 +289,29 @@ class AstCompiler {
 
   compile(text) {
     const ast = this.astBuilder.ast(text)
-    this.state = { body: [] }
+    this.state = { body: [], nextId: 0, vars: [] }
     this.recurse(ast)
-    return new Function(this.state.body.join('')) // eslint-disable-line
+    return new Function('s', `${this.state.vars.length ? // eslint-disable-line
+      `var ${this.state.vars.join(',')};` : ''}${this.state.body.join('')}`)
   }
 
   recurse(ast) {
     let elements
     let properties
+    let intoId
+    let left
     switch (ast.type) {
       case AST.Program:
         this.state.body.push('return ', this.recurse(ast.body), ';')
         return null
       case AST.Literal:
         return AstCompiler.escape(ast.value)
+      case AST.Identifier:
+        intoId = this.nextId()
+        this.if_('s', this.assign(intoId, this.nonComputedMember('s', ast.name)))
+        return intoId
+      case AST.ThisExpression:
+        return 's'
       case AST.ArrayExpression:
         elements = ast.elements.map((element) => this.recurse(element))
         return `[${elements.join(',')}]`
@@ -300,9 +324,33 @@ class AstCompiler {
           return `${key}:${value}`
         })
         return `{${properties.join(',')}}`
+      case AST.MemberExpression:
+        intoId = this.nextId()
+        left = this.recurse(ast.object)
+        this.if_(left, this.assign(intoId, this.nonComputedMember(left, ast.property.name)))
+        return intoId
       default:
         return null
     }
+  }
+
+  if_(test, consequent) {
+    this.state.body.push(`if(${test}){${consequent}}`)
+  }
+
+  nonComputedMember(left, right) {
+    return `(${left}).${right}`
+  }
+
+  assign(id, value) {
+    return `${id}=${value}`
+  }
+
+  nextId() {
+    const id = `v${this.state.nextId}`
+    this.state.nextId += 1
+    this.state.vars.push(id)
+    return id
   }
 }
 

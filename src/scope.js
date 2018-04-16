@@ -10,7 +10,7 @@ export default class Scope {
   $watch(watchFn, listenerFn, valueEq) {
     const watcher = {
       watchFn,
-      listenerFn: listenerFn || function () {},
+      listenerFn: listenerFn || function _listenerFn() {},
       last: initWatchVal,
       valueEq: !!valueEq,
     }
