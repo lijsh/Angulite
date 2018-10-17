@@ -291,7 +291,7 @@ class AstCompiler {
     const ast = this.astBuilder.ast(text)
     this.state = { body: [], nextId: 0, vars: [] }
     this.recurse(ast)
-    return new Function('s', `${this.state.vars.length ? // eslint-disable-line
+    return new Function('s', 'l', `${this.state.vars.length ? // eslint-disable-line
       `var ${this.state.vars.join(',')};` : ''}${this.state.body.join('')}`)
   }
 
@@ -308,7 +308,10 @@ class AstCompiler {
         return AstCompiler.escape(ast.value)
       case AST.Identifier:
         intoId = this.nextId()
-        this.if_('s', this.assign(intoId, this.nonComputedMember('s', ast.name)))
+        this.if_(this.getHasOwnProperty('l', ast.name),
+          this.assign(intoId, this.nonComputedMember('l', ast.name)))
+        this.if_(`${this.not(this.getHasOwnProperty('l', ast.name))} && s`,
+          this.assign(intoId, this.nonComputedMember('s', ast.name)))
         return intoId
       case AST.ThisExpression:
         return 's'
@@ -336,6 +339,14 @@ class AstCompiler {
 
   if_(test, consequent) {
     this.state.body.push(`if(${test}){${consequent}}`)
+  }
+
+  not(e) {
+    return `!(${e})`
+  }
+
+  getHasOwnProperty(obj, prop) {
+    return `${obj} && (${AstCompiler.escape(prop)} in ${obj})`
   }
 
   nonComputedMember(left, right) {
