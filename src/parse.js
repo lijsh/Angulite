@@ -189,11 +189,23 @@ class AST {
     } else {
       primary = this.constant()
     }
-    while (this.expect('.')) {
-      primary = {
-        type: AST.MemberExpression,
-        object: primary,
-        property: this.identifier(),
+    let next
+    while ((next = this.expect('.', '['))) { // eslint-disable-line
+      if (next.text === '[') {
+        primary = {
+          type: AST.MemberExpression,
+          object: primary,
+          property: this.primary(),
+          computed: true,
+        }
+        this.consume(']')
+      } else {
+        primary = {
+          type: AST.MemberExpression,
+          object: primary,
+          property: this.identifier(),
+          computed: false,
+        }
       }
     }
     return primary
@@ -213,17 +225,19 @@ class AST {
     }
   }
 
-  peek(ch) {
+  peek(e1, e2, e3, e4) {
     if (this.tokens.length > 0) {
-      if (this.tokens[0].text === ch || !ch) {
+      const text = this.tokens[0].text
+      if (text === e1 || text === e2 || text === e3 || text === e4 ||
+        (!e1 && !e2 && !e3 && !e4)) {
         return this.tokens[0]
       }
     }
     return null
   }
 
-  expect(ch) {
-    const token = this.peek(ch)
+  expect(e1, e2, e3, e4) {
+    const token = this.peek(e1, e2, e3, e4)
     if (token) {
       return this.tokens.shift()
     }
@@ -330,7 +344,12 @@ class AstCompiler {
       case AST.MemberExpression:
         intoId = this.nextId()
         left = this.recurse(ast.object)
-        this.if_(left, this.assign(intoId, this.nonComputedMember(left, ast.property.name)))
+        if (ast.computed) {
+          const right = this.recurse(ast.property)
+          this.if_(left, this.assign(intoId, this.computedMember(left, right)))
+        } else {
+          this.if_(left, this.assign(intoId, this.nonComputedMember(left, ast.property.name)))
+        }
         return intoId
       default:
         return null
@@ -351,6 +370,10 @@ class AstCompiler {
 
   nonComputedMember(left, right) {
     return `(${left}).${right}`
+  }
+
+  computedMember(left, right) {
+    return `(${left})[${right}]`
   }
 
   assign(id, value) {
